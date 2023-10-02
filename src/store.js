@@ -1,6 +1,12 @@
-import { create } from "zustand";
-import { kanas } from "./constants";
-import { subscribeWithSelector } from "zustand/middleware";
+import {
+    create
+} from "zustand";
+import {
+    kanas
+} from "./constants";
+import {
+    subscribeWithSelector
+} from "zustand/middleware";
 
 export const gameStates = {
     MENU: "MENU",
@@ -41,70 +47,73 @@ export const generateGameLevel = ({
 };
 
 export const useGameStore = create(subscribeWithSelector((set, get, ) => ({
-        level: null,
-        currentStage: 0,
-        currentKana: null,
-        mode: "hiragana",
-        gameState: gameStates.MENU,
-        wrongAnswers: 0,
-        startGame: (mode) => {
-            const level = generateGameLevel({
-                nbStages: 5
-            });
-            const currentKana = level[0].find((kana) => kana.correct);
-            playAudio('start', () => {
-                playAudio(`kanas/${currentKana.name}`);
-            })
-            set({
-                level,
-                currentStage: 0,
-                currentKana,
-                gameState : gameStates.GAME,
-                mode,
-                wrongAnswers: 0,
-            })
-        },
-        nextStage: () => {
-            set((state) => {
-                if (state.currentStage +1 === state.level.length) {
-                    playAudio("congratulations");
-                    return {
-                        currentStage: 0,
-                        currentKana: null,
-                        level: null,
-                        gameState: gameStates.GAME_OVER,
-                    }
-                }
-                const currentStage = state.currentStage + 1;
-                const currentKana = state.level[currentStage].find((kana) => kana.correct);
-                playAudio("good");
-                playAudio(`correct/${currentStage % 3}`, () => {
-                    playAudio(`kanas/${currentKana.name}`);
-                });
+    level: null,
+    currentStage: 0,
+    currentKana: null,
+    lastWrongKana: null,
+    mode: "hiragana",
+    gameState: gameStates.MENU,
+    wrongAnswers: 0,
+    startGame: (mode) => {
+        const level = generateGameLevel({
+            nbStages: 5
+        });
+        const currentKana = level[0].find((kana) => kana.correct);
+        playAudio('start', () => {
+            playAudio(`kanas/${currentKana.name}`);
+        })
+        set({
+            level,
+            currentStage: 0,
+            currentKana,
+            gameState: gameStates.GAME,
+            mode,
+            wrongAnswers: 0,
+        })
+    },
+    nextStage: () => {
+        set((state) => {
+            if (state.currentStage + 1 === state.level.length) {
+                playAudio("congratulations");
                 return {
-                    currentStage,
-                    currentKana
-                };
-            });
-        },
-        goToMenu: () => {
-            set({
-                gameState: gameStates.MENU,
-            });
-        },
-        kanaTouched: (kana) => {
-            const currentKana = get().currentKana;
-            if (currentKana.name === kana.name) {
-                get().nextStage();
-            } else {
-                playAudio("wrong");
-                playAudio(`kanas/${kana.name}`, () => {
-                    playAudio("fail");
-                });
-                set((state) => ({
-                    wrongAnswers: state.wrongAnswers + 1,
-                }));
+                    currentStage: 0,
+                    currentKana: null,
+                    level: null,
+                    gameState: gameStates.GAME_OVER,
+                    lastWrongKana: null,
+                }
             }
-        },
-    }))
-);
+            const currentStage = state.currentStage + 1;
+            const currentKana = state.level[currentStage].find((kana) => kana.correct);
+            playAudio("good");
+            playAudio(`correct/${currentStage % 3}`, () => {
+                playAudio(`kanas/${currentKana.name}`);
+            });
+            return {
+                currentStage,
+                currentKana,
+                lastWrongKana: null
+            };
+        });
+    },
+    goToMenu: () => {
+        set({
+            gameState: gameStates.MENU,
+        });
+    },
+    kanaTouched: (kana) => {
+        const currentKana = get().currentKana;
+        if (currentKana.name === kana.name) {
+            get().nextStage();
+        } else {
+            playAudio("wrong");
+            playAudio(`kanas/${kana.name}`, () => {
+                playAudio("fail");
+            });
+            set((state) => ({
+                wrongAnswers: state.wrongAnswers + 1,
+                lastWrongKana: kana,
+            }));
+        }
+    },
+})));
