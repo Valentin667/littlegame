@@ -16,7 +16,6 @@ export const Experience = () => {
 
   return (
     <>
-      <OrbitControls />
       {/* Lights */}
       <Environment preset="sunset" />
       <directionalLight
@@ -28,14 +27,12 @@ export const Experience = () => {
 
       {/* BACKGROUND */}
 
-      {
-        currentKana && (
-          <Text position={[0, -0.92, 0]} fontSize={1.84} rotation-x={-Math.PI / 2} font="./fonts/Poppins-ExtraBold.ttf">
-            {currentKana.name.toUpperCase()}
-            <meshStandardMaterial color={"white"} opacity={0.6} transparent />
-          </Text>
-        )
-      }
+
+      <Text position={[0, -0.92, 0]} fontSize={1.84} rotation-x={-Math.PI / 2} font="./fonts/Poppins-ExtraBold.ttf">
+        {currentKana ? currentKana.name.toUpperCase() : "Kana Game"}
+        <meshStandardMaterial color={"white"} opacity={0.6} transparent />
+      </Text>
+
       {
         lastWrongKana && (
           <Text position={[0, -0.92, 1.2]} fontSize={1} rotation-x={-Math.PI / 2} font="./fonts/Poppins-ExtraBold.ttf">

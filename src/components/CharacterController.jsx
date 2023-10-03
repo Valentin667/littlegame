@@ -4,7 +4,7 @@ import { useKeyboardControls } from "@react-three/drei";
 import { useEffect, useRef } from "react";
 import { Controls } from "../App";
 import { useFrame } from "@react-three/fiber";
-import { playAudio, useGameStore } from "../store";
+import { gameStates, playAudio, useGameStore } from "../store";
 
 import * as THREE from "three";
 
@@ -13,38 +13,45 @@ const MOVEMENT_SPEED = 0.1;
 const MAX_VEL = 3;
 
 export const CharacterController = () => {
-    const jumpPressed = useKeyboardControls((state) => state [Controls.jump]);
-    const leftPressed = useKeyboardControls((state) => state [Controls.left]);
-    const rightPressed = useKeyboardControls((state) => state [Controls.right]);
-    const backPressed = useKeyboardControls((state) => state [Controls.back]);
-    const forwardPressed = useKeyboardControls((state) => state [Controls.forward]);
+    const { characterState, setCharacterState, gameState } = useGameStore(
+        (state) => ({
+            character: state.characterState,
+            setCharacterState: state.setCharacterState,
+            gameState: state.gameState,
+        })
+    );
+    const jumpPressed = useKeyboardControls((state) => state[Controls.jump]);
+    const leftPressed = useKeyboardControls((state) => state[Controls.left]);
+    const rightPressed = useKeyboardControls((state) => state[Controls.right]);
+    const backPressed = useKeyboardControls((state) => state[Controls.back]);
+    const forwardPressed = useKeyboardControls((state) => state[Controls.forward]);
 
     const rigidbody = useRef();
     const isOnFloor = useRef(true);
 
-    useFrame((state) => {
+    useFrame((state, delta) => {
         const impulse = { x: 0, y: 0, z: 0 };
-    if (jumpPressed && isOnFloor.current) {
-      impulse.y += JUMP_FORCE;
-      isOnFloor.current = false;
-    }
+        if (jumpPressed && isOnFloor.current) {
+            impulse.y += JUMP_FORCE;
+            isOnFloor.current = false;
+        }
 
         const linvel = rigidbody.current.linvel();
-        let changeRotation = false; 
+        let changeRotation = false;
 
-        if(rightPressed && linvel.x < MAX_VEL) {
+        if (rightPressed && linvel.x < MAX_VEL) {
             impulse.x += MOVEMENT_SPEED;
             changeRotation = true;
         }
-        if(leftPressed && linvel.x > -MAX_VEL) {
+        if (leftPressed && linvel.x > -MAX_VEL) {
             impulse.x -= MOVEMENT_SPEED;
             changeRotation = true;
         }
-        if(backPressed && linvel.z < MAX_VEL) {
+        if (backPressed && linvel.z < MAX_VEL) {
             impulse.z += MOVEMENT_SPEED;
             changeRotation = true;
         }
-        if(forwardPressed && linvel.z > -MAX_VEL) {
+        if (forwardPressed && linvel.z > -MAX_VEL) {
             impulse.z -= MOVEMENT_SPEED;
             changeRotation = true;
         }
@@ -57,24 +64,48 @@ export const CharacterController = () => {
 
         // CAMERA FOLLOW
         const characterWorldPosition = character.current.getWorldPosition(new THREE.Vector3());
-        state.camera.position.x = characterWorldPosition.x;
-        state.camera.position.z = characterWorldPosition.z + 14;
+
+        const targetCameraPosition = new THREE.Vector3(
+            characterWorldPosition.x,
+            0,
+            characterWorldPosition.z + 14,
+        )
+
+        if (gameState === gameStates.GAME) {
+            targetCameraPosition.y = 6;
+        }
+        if (gameState !== gameStates.GAME) {
+            targetCameraPosition.y = 0;
+        }
+
+        state.camera.position.lerp(targetCameraPosition, delta * 2);
 
         const targetLookAt = new THREE.Vector3(characterWorldPosition.x, 0, characterWorldPosition.z);
 
-        state.camera.lookAt(targetLookAt);
+        const direction = new THREE.Vector3();
+        state.camera.getWorldDirection(direction);
+
+        const position = new THREE.Vector3();
+        state.camera.getWorldPosition(position);
+
+        const currentLookAt = position.clone().add(direction);
+        const lerpedLookAt = new THREE.Vector3();
+
+        lerpedLookAt.lerpVectors(currentLookAt, targetLookAt, delta * 2);
+
+        state.camera.lookAt(lerpedLookAt);
     });
 
     const character = useRef();
 
     const resetPosition = () => {
-        rigidbody.current.setTranslation(vec3({x: 0, y: 0, z: 0}));
-        rigidbody.current.setLinvel(vec3({x: 0, y: 0, z: 0}));
+        rigidbody.current.setTranslation(vec3({ x: 0, y: 0, z: 0 }));
+        rigidbody.current.setLinvel(vec3({ x: 0, y: 0, z: 0 }));
     }
 
-    useEffect (() => useGameStore.subscribe((state) => state.currentStage, resetPosition), []);
+    useEffect(() => useGameStore.subscribe((state) => state.currentStage, resetPosition), []);
 
-    useEffect (() => {
+    useEffect(() => {
         const subscribed = useGameStore.subscribe((state) => state.wrongAnswers, resetPosition);
         return subscribed;
     }, []);
@@ -82,25 +113,25 @@ export const CharacterController = () => {
     return (
         <group>
             <RigidBody
-            ref={rigidbody} 
-            colliders={false}
-            scale={[0.5, 0.5, 0.5]}
-            enabledRotations={[false, false, false]}
-            onCollisionEnter={() => {
-                isOnFloor.current = true;
-            }}
-            onIntersectionEnter={({ other }) => {
-                if (other.rigidBodyObject.name === "void") {
-                    resetPosition();
-                    playAudio("fall", () => {
-                        playAudio("ganbatte");
-                    });
-                }
-            }}
+                ref={rigidbody}
+                colliders={false}
+                scale={[0.5, 0.5, 0.5]}
+                enabledRotations={[false, false, false]}
+                onCollisionEnter={() => {
+                    isOnFloor.current = true;
+                }}
+                onIntersectionEnter={({ other }) => {
+                    if (other.rigidBodyObject.name === "void") {
+                        resetPosition();
+                        playAudio("fall", () => {
+                            playAudio("ganbatte");
+                        });
+                    }
+                }}
             >
                 <CapsuleCollider
-                args={[0.8, 0.4]}
-                position={[0, 1.2, 0]}
+                    args={[0.8, 0.4]}
+                    position={[0, 1.2, 0]}
                 />
                 <group ref={character}>
                     <Character />
