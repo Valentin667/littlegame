@@ -1,6 +1,5 @@
 import { ContactShadows, Cylinder, Environment, MeshReflectorMaterial, OrbitControls, Text, Text3D } from "@react-three/drei";
 import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
-import { Torii } from "./Torii";
 import { KanaSpots } from "./KanaSpots";
 import { CharacterController } from "./CharacterController";
 import { useGameStore } from "../store";

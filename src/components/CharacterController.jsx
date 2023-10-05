@@ -11,6 +11,7 @@ import * as THREE from "three";
 const JUMP_FORCE = 0.5;
 const MOVEMENT_SPEED = 0.1;
 const MAX_VEL = 3;
+const RUN_VEL = 1.5;
 
 export const CharacterController = () => {
     const { characterState, setCharacterState, gameState } = useGameStore(
@@ -57,6 +58,17 @@ export const CharacterController = () => {
         }
 
         rigidbody.current.applyImpulse(impulse, true);
+
+        if (Math.abs(linvel.x) > RUN_VEL || Math.abs(linvel.z) > RUN_VEL) {
+            if (characterState !== "Run") {
+                setCharacterState("Run");
+            }
+        } else {
+            if (characterState !== "Idle") {
+                setCharacterState("Idle");
+            }
+        }
+
         if (changeRotation) {
             const angle = Math.atan2(linvel.x, linvel.z);
             character.current.rotation.y = angle;
